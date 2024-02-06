@@ -34,29 +34,25 @@ jobs:
         sudo make install
         sudo ldconfig /usr/local/lib
     
-    - name: Install msys2
+    - name: Install msys2 windows
       if: matrix.os == 'windows-latest'
       uses: msys2/setup-msys2@v2
       with:
         release: false
-        msystem: msys
+        msystem: mingw64
         update: true
-
-    - name: Install msys2 deps
-      if: matrix.os == 'windows-latest'
-      shell: msys2 {0}
-      run: |
-        pacman -S --noconfirm mingw-w64-x86_64-gcc
-        pacman -S --noconfirm mingw-w64-x86_64-pkg-config
-        pacman -S --noconfirm mingw-w64-x86_64-zlib
-        pacman -S --noconfirm mingw-w64-x86_64-imagemagick
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-pkg-config
+          mingw-w64-x86_64-zlib
+          mingw-w64-x86_64-imagemagick
   
     - name: Build Windows
       if: matrix.os == 'windows-latest'
       working-directory: ./meme-maker
       shell: powershell
       run: |
-         dir C:\msys64\mingw64\lib\pkgconfig
+         $env:CGO_CFLAGS = "-DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -D_DLL -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -D_DLL -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -IC:/msys64/mingw64/include/ImageMagick-7"
          $env:PATH += ";C:\msys64\mingw64\bin"
          $env:PKG_CONFIG_PATH = "C:\msys64\mingw64\lib\pkgconfig"
          $env:MAGICK_CODER_MODULE_PATH = "C:\msys64\mingw64\lib\ImageMagick-7.1.1\modules-Q16HDRI\coders"
