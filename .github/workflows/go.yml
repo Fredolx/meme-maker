@@ -51,7 +51,8 @@ jobs:
       working-directory: ./meme-maker
       shell: powershell
       run: |
-         $env:Path += ";D:\msys64\mingw64\bin"
+         dir D:\
+         $env:PATH += ";D:\msys64\mingw64\bin"
          $env:PKG_CONFIG_PATH = "D:\msys64\mingw64\lib\pkgconfig"
          $env:MAGICK_CODER_MODULE_PATH = "D:\msys64\mingw64\lib\ImageMagick-7.1.1\modules-Q16HDRI\coders"
          .\compile-windows.ps1
