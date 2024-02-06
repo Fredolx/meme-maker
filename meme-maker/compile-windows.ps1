@@ -2,7 +2,7 @@ $programPath = "./bin/meme-maker.exe"
 go build -v -o $programPath
 
 [string[]]$dlls = [System.Collections.ArrayList]@()
-$lddOutput = & ldd.exe $programPath
+$lddOutput = & "C:\msys64\usr\bin\ldd.exe" $programPath
 
 $lddOutput | ForEach-Object {
     if ($_ -match '.* => (.+) \(.*$') {
