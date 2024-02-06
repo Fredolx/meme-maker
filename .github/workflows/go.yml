@@ -52,8 +52,8 @@ jobs:
       working-directory: ./meme-maker
       shell: powershell
       run: |
-         $env:CGO_CFLAGS = "-DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -D_DLL -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -D_DLL -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -IC:/msys64/mingw64/include/ImageMagick-7"
-         $env:CGO_LDFLAGS = "-LC:/msys64/mingw64/lib"
+         $env:CGO_CFLAGS = "-IC:/msys64/mingw64/include/ImageMagick-7"
+         $env:CGO_LDFLAGS = "-LC:/msys64/mingw64/lib -lMagickWand-7.Q16HDRI -lMagickCore-7.Q16HDRI"
          $env:PATH += ";C:\msys64\mingw64\bin"
          $env:PKG_CONFIG_PATH = "C:\msys64\mingw64\lib\pkgconfig"
          $env:MAGICK_CODER_MODULE_PATH = "C:\msys64\mingw64\lib\ImageMagick-7.1.1\modules-Q16HDRI\coders"
