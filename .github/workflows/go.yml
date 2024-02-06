@@ -1,0 +1,43 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Go
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Install deps
+      run: |
+        sudo apt install -y build-essential git
+        git clone https://github.com/ImageMagick/ImageMagick.git ImageMagick-7.1.1
+        cd ImageMagick-7.1.1
+        ./configure
+        make -j$(nproc)
+        make install
+        ldconfig /usr/local/lib
+
+    - name: Build
+      working-directory: ./meme-maker
+      run: |
+        go build -v .
+    
+    - uses: actions/upload-artifact@v4
+      with:
+        name: meme-maker-linux-amd64
+        path: ./meme-maker/meme-maker
+    
