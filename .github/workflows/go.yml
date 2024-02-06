@@ -11,8 +11,13 @@ on:
 
 jobs:
 
+  strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
     steps:
     - uses: actions/checkout@v3
 
@@ -21,7 +26,8 @@ jobs:
       with:
         go-version: '1.21'
 
-    - name: Install deps
+    - name: Install deps linux
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt install -y build-essential git
         git clone https://github.com/ImageMagick/ImageMagick.git ImageMagick-7.1.1
@@ -30,14 +36,43 @@ jobs:
         make -j$(nproc)
         sudo make install
         sudo ldconfig /usr/local/lib
+    
+    - name: Install msys2 windows
+      if: matrix.os == 'windows-latest'
+      uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-pkg-config
+          mingw-w64-x86_64-zlib
+          mingw-w64-x86_64-imagemagick
+  
+    - name: Build Windows
+      if: matrix.os == 'windows-latest'
+      working-directory: ./meme-maker
+      shell: powershell
+      run: |
+         $env:Path += ";C:\msys64\mingw64\bin"
+         $env:PKG_CONFIG_PATH = "C:\msys64\mingw64\lib\pkgconfig"
+         $env:MAGICK_CODER_MODULE_PATH = "C:\msys64\mingw64\lib\ImageMagick-7.1.1\modules-Q16HDRI\coders"
+         .\compile-windows.ps1
 
-    - name: Build
+    - name: Build Linux
+      if: matrix.os == 'ubuntu-latest'
       working-directory: ./meme-maker
       run: |
         go build -v .
     
     - uses: actions/upload-artifact@v4
+      if: matrix.os == 'ubuntu-latest'
       with:
         name: meme-maker-linux-amd64
         path: ./meme-maker/meme-maker
+    
+    - uses: actions/upload-artifact@v4
+      if: matrix.os == 'windows-latest'
+      with:
+        name: meme-maker-windows-amd64
+        path: ./meme-maker/bin/*
     
