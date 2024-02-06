@@ -40,6 +40,7 @@ jobs:
       with:
         location: C:\
         update: true
+        release: true
         install: >-
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-pkg-config
