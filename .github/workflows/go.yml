@@ -38,6 +38,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       uses: msys2/setup-msys2@v2
       with:
+        location: C:\
         update: true
         install: >-
           mingw-w64-x86_64-gcc
@@ -50,6 +51,7 @@ jobs:
       working-directory: ./meme-maker
       shell: powershell
       run: |
+         dir C:\
          $env:Path += ";C:\msys64\mingw64\bin"
          $env:PKG_CONFIG_PATH = "C:\msys64\mingw64\lib\pkgconfig"
          $env:MAGICK_CODER_MODULE_PATH = "C:\msys64\mingw64\lib\ImageMagick-7.1.1\modules-Q16HDRI\coders"
