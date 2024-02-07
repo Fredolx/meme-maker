@@ -80,7 +80,6 @@ func annotate(mw *imagick.MagickWand, dw *imagick.DrawingWand, lines []string, y
 	mw.SetGravity(imagick.GRAVITY_NORTH)
 	metrics := mw.QueryFontMetrics(dw, lines[0])
 	var y float64 = metrics.BoundingBoxY2 - metrics.Ascender + yPaddingPx
-	fmt.Printf("%f %f %f %f, %f", metrics.BoundingBoxY2, metrics.TextHeight, metrics.CharacterHeight, metrics.Ascender, metrics.Descender)
 	for i, str := range lines {
 		if i != 0 {
 			y += mw.QueryFontMetrics(dw, str).Ascender + lineHeightPx
