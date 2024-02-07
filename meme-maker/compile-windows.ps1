@@ -26,4 +26,6 @@ foreach ($dll in $dlls) {
 }
 
 New-Item -Path "build" -Name "lib" -ItemType Directory
+New-Item -Path "build" -Name "etc" -ItemType Directory
 Copy-Item -Path "C:\msys64\mingw64\lib\ImageMagick-7.1.1" -Destination "build\lib" -Recurse
+Copy-Item -Path "C:\msys64\mingw64\etc\fonts" -Destination "build\etc" -Recurse
