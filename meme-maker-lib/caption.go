@@ -3,6 +3,7 @@ package caption
 import (
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	imagick "gopkg.in/gographics/imagick.v3/imagick"
@@ -19,6 +20,13 @@ func AddCaption(filePath string, caption string, paddingPercent float64, font st
 	if fontSize == 0 {
 		fontSize = 72
 	}
+	if font == "" {
+		if runtime.GOOS == "windows" {
+			font = "Arial"
+		} else {
+			font = "DejaVu-Sans"
+		}
+	}
 	imagick.Initialize()
 	defer imagick.Terminate()
 	var baseHeight float64 = fontSize*0.2 + fontSize
@@ -29,14 +37,8 @@ func AddCaption(filePath string, caption string, paddingPercent float64, font st
 	if e != nil {
 		return e
 	}
-	if font != "" {
-		if e := dw.SetFont(font); e != nil {
-			return e
-		}
-	} else {
-		if e := dw.SetFontFamily("Courier"); e != nil {
-			return e
-		}
+	if e := dw.SetFont(font); e != nil {
+		return e
 	}
 	pw.SetColor("black")
 	dw.SetTextAntialias(true)
@@ -114,6 +116,6 @@ func ListFonts(font string) {
 	font += "*"
 	array := mw.QueryFonts(font)
 	for _, element := range array {
-		println(element)
+		fmt.Println(element)
 	}
 }
