@@ -13,7 +13,8 @@ func fileNameWithoutExtension(fileName string) string {
 	return strings.TrimSuffix(filepath.Base(fileName), filepath.Ext(fileName))
 }
 
-func AddCaption(filePath string, caption string, paddingPercent float64, font string, fontSize float64, output string) error {
+func AddCaption(filePath string, caption string, xPaddingPercent float64, yPaddingPercent float64, font string,
+	fontSize float64, lineHeightPx float64, output string) error {
 	if output == "" {
 		output = fmt.Sprintf("%s_memed%s", fileNameWithoutExtension(filePath), filepath.Ext(filePath))
 	}
@@ -40,21 +41,14 @@ func AddCaption(filePath string, caption string, paddingPercent float64, font st
 		return e
 	}
 	pw.SetColor("black")
-	dw.SetTextAntialias(true)
 	dw.SetFillColor(pw)
 	dw.SetFontSize(fontSize)
-	lines := splitCaption(caption, mw, dw, paddingPercent)
-	mw.SetGravity(imagick.GRAVITY_NORTH)
-	metrics := mw.QueryFontMetrics(dw, lines[0])
-	var y float64 = metrics.BoundingBoxY2 - metrics.Ascender
-	fmt.Printf("%f %f %f %f, %f", metrics.BoundingBoxY2, metrics.TextHeight, metrics.CharacterHeight, metrics.Ascender, metrics.Descender)
-	for i, str := range lines {
-		if i != 0 {
-			y += mw.QueryFontMetrics(dw, str).Ascender
-		}
-		dw.Annotation(0, y, str)
+	lines := splitCaption(caption, mw, dw, xPaddingPercent)
+	var yPaddingPx float64 = 0
+	if yPaddingPercent != 0 {
+		yPaddingPx = fontSize * (yPaddingPercent / 100)
 	}
-	y += metrics.TextHeight
+	totalHeight := annotate(mw, dw, lines, yPaddingPx, lineHeightPx)
 	if mw.GetImageFormat() == "GIF" {
 		mw = mw.CoalesceImages()
 		var bgColor, _ = mw.GetImageBackgroundColor()
@@ -65,7 +59,7 @@ func AddCaption(filePath string, caption string, paddingPercent float64, font st
 	for ok := true; ok; ok = mw.NextImage() {
 		pw.SetColor("white")
 		mw.SetImageBackgroundColor(pw)
-		mw.SpliceImage(0, uint(y), 0, 0)
+		mw.SpliceImage(0, uint(totalHeight), 0, 0)
 		if e := mw.DrawImage(dw); e != nil {
 			return e
 		}
@@ -80,6 +74,21 @@ func AddCaption(filePath string, caption string, paddingPercent float64, font st
 		}
 	}
 	return nil
+}
+
+func annotate(mw *imagick.MagickWand, dw *imagick.DrawingWand, lines []string, yPaddingPx float64, lineHeightPx float64) float64 {
+	mw.SetGravity(imagick.GRAVITY_NORTH)
+	metrics := mw.QueryFontMetrics(dw, lines[0])
+	var y float64 = metrics.BoundingBoxY2 - metrics.Ascender + yPaddingPx
+	fmt.Printf("%f %f %f %f, %f", metrics.BoundingBoxY2, metrics.TextHeight, metrics.CharacterHeight, metrics.Ascender, metrics.Descender)
+	for i, str := range lines {
+		if i != 0 {
+			y += mw.QueryFontMetrics(dw, str).Ascender + lineHeightPx
+		}
+		dw.Annotation(0, y, str)
+	}
+	y += metrics.TextHeight + yPaddingPx
+	return y
 }
 
 func splitCaption(caption string, mw *imagick.MagickWand, dw *imagick.DrawingWand, paddingPercent float64) []string {
