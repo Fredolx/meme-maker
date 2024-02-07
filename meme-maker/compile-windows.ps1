@@ -1,3 +1,6 @@
+if (Test-Path -Path "build") {
+    Remove-Item -Recurse "build"
+}
 $programPath = "./build/bin/meme-maker.exe"
 go build -v -o $programPath
 
@@ -19,7 +22,7 @@ $lddOutput | ForEach-Object {
 
 foreach ($dll in $dlls) {
     Write-Output $dll
-    Copy-Item $dll -Destination ./bin
+    Copy-Item $dll -Destination ./build/bin
 }
 
 New-Item -Path "build" -Name "lib" -ItemType Directory
