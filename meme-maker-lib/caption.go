@@ -82,11 +82,17 @@ func annotate(mw *imagick.MagickWand, dw *imagick.DrawingWand, lines []string, y
 	var y float64 = metrics.BoundingBoxY2 - metrics.Ascender + yPaddingPx
 	for i, str := range lines {
 		if i != 0 {
-			y += mw.QueryFontMetrics(dw, str).Ascender + lineHeightPx
+			y += mw.QueryFontMetrics(dw, str).TextHeight + lineHeightPx
 		}
 		dw.Annotation(0, y, str)
 	}
-	y += metrics.TextHeight + yPaddingPx
+	fmt.Printf("%f %f %f %f", metrics.Ascender, metrics.Descender, metrics.TextHeight, metrics.Ascender-metrics.Descender)
+	if strings.ContainsAny(strings.ToLower(lines[len(lines)-1]), "gjpqy") {
+		y += metrics.TextHeight
+	} else {
+		y += metrics.Ascender
+	}
+	y += yPaddingPx
 	return y
 }
 
