@@ -1,4 +1,4 @@
-$programPath = "./bin/meme-maker.exe"
+$programPath = "./build/bin/meme-maker.exe"
 go build -v -o $programPath
 
 [string[]]$dlls = [System.Collections.ArrayList]@()
@@ -21,3 +21,6 @@ foreach ($dll in $dlls) {
     Write-Output $dll
     Copy-Item $dll -Destination ./bin
 }
+
+New-Item -Path "build" -Name "lib" -ItemType Directory
+Copy-Item -Path "C:\msys64\mingw64\lib\ImageMagick-7.1.1" -Destination "build\lib" -Recurse

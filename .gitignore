@@ -20,5 +20,5 @@
 # Go workspace file
 go.work
 
-meme-maker\build
+meme-maker/build
 meme-maker/bin
