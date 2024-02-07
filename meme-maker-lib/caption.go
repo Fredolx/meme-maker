@@ -29,7 +29,6 @@ func AddCaption(filePath string, caption string, paddingPercent float64, font st
 	}
 	imagick.Initialize()
 	defer imagick.Terminate()
-	var baseHeight float64 = fontSize*0.2 + fontSize
 	mw := imagick.NewMagickWand()
 	dw := imagick.NewDrawingWand()
 	pw := imagick.NewPixelWand()
@@ -46,10 +45,16 @@ func AddCaption(filePath string, caption string, paddingPercent float64, font st
 	dw.SetFontSize(fontSize)
 	lines := splitCaption(caption, mw, dw, paddingPercent)
 	mw.SetGravity(imagick.GRAVITY_NORTH)
+	metrics := mw.QueryFontMetrics(dw, lines[0])
+	var y float64 = metrics.BoundingBoxY2 - metrics.Ascender
+	fmt.Printf("%f %f %f %f, %f", metrics.BoundingBoxY2, metrics.TextHeight, metrics.CharacterHeight, metrics.Ascender, metrics.Descender)
 	for i, str := range lines {
-		y := float64(i * int(fontSize))
+		if i != 0 {
+			y += mw.QueryFontMetrics(dw, str).Ascender
+		}
 		dw.Annotation(0, y, str)
 	}
+	y += metrics.TextHeight
 	if mw.GetImageFormat() == "GIF" {
 		mw = mw.CoalesceImages()
 		var bgColor, _ = mw.GetImageBackgroundColor()
@@ -60,7 +65,7 @@ func AddCaption(filePath string, caption string, paddingPercent float64, font st
 	for ok := true; ok; ok = mw.NextImage() {
 		pw.SetColor("white")
 		mw.SetImageBackgroundColor(pw)
-		mw.SpliceImage(0, uint(baseHeight*float64(len(lines))), 0, 0)
+		mw.SpliceImage(0, uint(y), 0, 0)
 		if e := mw.DrawImage(dw); e != nil {
 			return e
 		}
