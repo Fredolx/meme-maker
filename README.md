@@ -8,7 +8,13 @@ https://github.com/Fredolx/meme-maker/assets/38048855/d3a93ac6-e175-49bd-ac83-a5
 
 
 The Windows build is batteries-included (has all dependencies pre-packaged), the linux build only depends on ImageMagick7.
-A scoop version for Windows is coming soon! You can follow the progress [here](https://github.com/ScoopInstaller/Extras/pull/12773)
+
+If you want to see an official scoop version for Windows, star this repo! (50 are required for being on Extras). 
+
+In the meantime, you can still use scoop to install meme-maker using this repo's manifest:
+```
+scoop install https://raw.githubusercontent.com/Fredolx/meme-maker/main/meme-maker.json
+```
 
 ## Usage
 meme-maker prides itself in its simplicity. You can generate a quick meme using only two arguments:
