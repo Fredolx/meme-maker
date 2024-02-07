@@ -45,10 +45,10 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.Flags().StringP(fontConst, fontShortConst, "", "Sets the font to use for the caption")
-	rootCmd.Flags().Float64P(fontSizeConst, fontSizeShortConst, 50, "Sets the font size for the caption")
-	rootCmd.Flags().Float64P(xPaddingConst, xPaddingShortConst, 5, "Sets the horizontal padding percentage for the caption")
-	rootCmd.Flags().Float64P(yPaddingConst, yPaddingShortConst, 30, "Sets the vertical padding percentage for the caption")
-	rootCmd.Flags().Float64P(lineHeightConst, lineHeightShortConst, 0, "Sets the line height in pixels for the caption")
-	rootCmd.Flags().StringP(outputConst, outputShortConst, "", "Sets the output path for the meme'd image")
+	rootCmd.Flags().StringP(fontConst, fontShortConst, "", "Font to use")
+	rootCmd.Flags().Float64P(fontSizeConst, fontSizeShortConst, 50, "Font size")
+	rootCmd.Flags().Float64P(xPaddingConst, xPaddingShortConst, 5, "Horizontal padding percentage")
+	rootCmd.Flags().Float64P(yPaddingConst, yPaddingShortConst, 30, "Vertical padding percentage")
+	rootCmd.Flags().Float64P(lineHeightConst, lineHeightShortConst, 0, "Line height in pixels")
+	rootCmd.Flags().StringP(outputConst, outputShortConst, "", "Output path for the meme'd image")
 }
