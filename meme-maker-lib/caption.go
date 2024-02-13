@@ -9,17 +9,33 @@ import (
 	imagick "gopkg.in/gographics/imagick.v3/imagick"
 )
 
+type CaptionArgs struct {
+	filePath        string
+	caption         string
+	bottomCaption   string
+	xPaddingPercent float64
+	yPaddingPercent float64
+	font            string
+	fontSize        float64
+	lineHeightPx    float64
+	color           string
+	strokeWidth     float64
+	output          string
+}
+
 func fileNameWithoutExtension(fileName string) string {
 	return strings.TrimSuffix(filepath.Base(fileName), filepath.Ext(fileName))
 }
 
-func AddCaption(filePath string, caption string, xPaddingPercent float64, yPaddingPercent float64, font string,
-	fontSize float64, lineHeightPx float64, output string) error {
+func AddCaption(caption CaptionArgs) error {
+	var topBottomMode = bottomCaption != ""
+	var color = "black"
+	var e error
+	var dw, bottomDW *imagick.DrawingWand
+	var yPaddingPx float64 = 0
+	var isGif bool
 	if output == "" {
 		output = fmt.Sprintf("%s_memed%s", fileNameWithoutExtension(filePath), filepath.Ext(filePath))
-	}
-	if fontSize == 0 {
-		fontSize = 72
 	}
 	if font == "" {
 		if runtime.GOOS == "windows" {
@@ -31,25 +47,31 @@ func AddCaption(filePath string, caption string, xPaddingPercent float64, yPaddi
 	imagick.Initialize()
 	defer imagick.Terminate()
 	mw := imagick.NewMagickWand()
-	dw := imagick.NewDrawingWand()
 	pw := imagick.NewPixelWand()
-	var e = mw.ReadImage(filePath)
-	if e != nil {
+	if e = mw.ReadImage(filePath); e != nil {
 		return e
 	}
-	if e := dw.SetFont(font); e != nil {
-		return e
+	if fontSize == 0 {
+		fontSize = float64(mw.GetImageWidth()) / 15
 	}
-	pw.SetColor("black")
-	dw.SetFillColor(pw)
-	dw.SetFontSize(fontSize)
-	lines := splitCaption(caption, mw, dw, xPaddingPercent)
-	var yPaddingPx float64 = 0
+	isGif = mw.GetImageFormat() == "GIF"
 	if yPaddingPercent != 0 {
 		yPaddingPx = fontSize * (yPaddingPercent / 100)
 	}
-	totalHeight := annotate(mw, dw, lines, yPaddingPx, lineHeightPx)
-	if mw.GetImageFormat() == "GIF" {
+	if topBottomMode {
+		color = "white"
+		if bottomDW, e = setUpDrawingWand(pw, font, fontSize, color); e != nil {
+			return e
+		}
+		bottomCaptionLines := splitCaption(bottomCaption, mw, bottomDW, xPaddingPercent)
+		_ = annotate(mw, bottomDW, bottomCaptionLines, yPaddingPx, lineHeightPx, imagick.GRAVITY_SOUTH)
+	}
+	if dw, e = setUpDrawingWand(pw, font, fontSize, color); e != nil {
+		return e
+	}
+	lines := splitCaption(caption, mw, dw, xPaddingPercent)
+	topCaptionHeight := annotate(mw, dw, lines, yPaddingPx, lineHeightPx, imagick.GRAVITY_NORTH)
+	if isGif {
 		mw = mw.CoalesceImages()
 		var bgColor, _ = mw.GetImageBackgroundColor()
 		if bgColor.GetAlpha() == 0 {
@@ -59,34 +81,58 @@ func AddCaption(filePath string, caption string, xPaddingPercent float64, yPaddi
 	for ok := true; ok; ok = mw.NextImage() {
 		pw.SetColor("white")
 		mw.SetImageBackgroundColor(pw)
-		mw.SpliceImage(0, uint(totalHeight), 0, 0)
-		if e := mw.DrawImage(dw); e != nil {
+		if !topBottomMode {
+			mw.SpliceImage(0, uint(topCaptionHeight), 0, 0)
+		} else {
+			if e := mw.DrawImage(bottomDW); e != nil {
+				return e
+			}
+		}
+		if e = mw.DrawImage(dw); e != nil {
 			return e
 		}
 	}
-	if mw.GetImageFormat() == "GIF" {
-		if e := mw.WriteImages(output, true); e != nil {
+	if isGif {
+		if e = mw.WriteImages(output, true); e != nil {
 			return e
 		}
 	} else {
-		if e := mw.WriteImage(output); e != nil {
+		if e = mw.WriteImage(output); e != nil {
 			return e
 		}
 	}
 	return nil
 }
 
-func annotate(mw *imagick.MagickWand, dw *imagick.DrawingWand, lines []string, yPaddingPx float64, lineHeightPx float64) float64 {
-	mw.SetGravity(imagick.GRAVITY_NORTH)
+func setUpDrawingWand(pw *imagick.PixelWand, font string, fontSize float64, color string, stroke bool) (*imagick.DrawingWand, error) {
+	dw := imagick.NewDrawingWand()
+	if e := dw.SetFont(font); e != nil {
+		return nil, e
+	}
+	pw.SetColor(color)
+	dw.SetFillColor(pw)
+	pw.SetColor("black")
+	dw.SetStrokeColor(pw)
+	dw.SetStrokeWidth(fontSize / 40)
+	dw.SetStrokeAntialias(true)
+	dw.SetFontSize(fontSize)
+	return dw, nil
+}
+
+func annotate(mw *imagick.MagickWand, dw *imagick.DrawingWand, lines []string, yPaddingPx float64, lineHeightPx float64, gravity imagick.GravityType) float64 {
+	dw.SetGravity(gravity)
 	metrics := mw.QueryFontMetrics(dw, lines[0])
 	var y float64 = metrics.BoundingBoxY2 - metrics.Ascender + yPaddingPx
+	if gravity == imagick.GRAVITY_SOUTH {
+		y = yPaddingPx
+	}
 	for i, str := range lines {
 		if i != 0 {
 			y += mw.QueryFontMetrics(dw, str).TextHeight + lineHeightPx
 		}
 		dw.Annotation(0, y, str)
 	}
-	if strings.ContainsAny(strings.ToLower(lines[len(lines)-1]), "gjpqy") {
+	if strings.ContainsAny(lines[len(lines)-1], "gjpqy") {
 		y += metrics.TextHeight
 	} else {
 		y += metrics.Ascender
