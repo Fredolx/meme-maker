@@ -103,10 +103,8 @@ func (c *Caption) handleGifs() {
 
 func (c *Caption) drawImage(topCaptionHeight float64) error {
 	for ok := true; ok; ok = c.wands.mw.NextImage() {
-		c.wands.pw.SetColor("white")
-		c.wands.mw.SetImageBackgroundColor(c.wands.pw)
 		if !c.topBottomMode {
-			c.wands.mw.SpliceImage(0, uint(topCaptionHeight), 0, 0)
+			c.addWhiteSpace(topCaptionHeight)
 		} else {
 			if e := c.wands.mw.DrawImage(c.wands.bottomDW); e != nil {
 				return e
@@ -117,6 +115,12 @@ func (c *Caption) drawImage(topCaptionHeight float64) error {
 		}
 	}
 	return nil
+}
+
+func (c *Caption) addWhiteSpace(topCaptionHeight float64) {
+	c.wands.pw.SetColor("white")
+	c.wands.mw.SetImageBackgroundColor(c.wands.pw)
+	c.wands.mw.SpliceImage(0, uint(topCaptionHeight), 0, 0)
 }
 
 func (c *Caption) setDefaults() {
