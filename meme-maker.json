@@ -1,12 +1,12 @@
 {
-    "version": "0.1",
+    "version": "0.2",
     "description": "CLI utility to make simple memes from images and gifs",
     "homepage": "https://github.com/Fredolx/meme-maker",
     "license": "AGPLv3",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/fredolx/meme-maker/releases/download/v0.1/mememaker_0.1_windows.zip",
-            "hash": "a5b4b5f287b2d248d2042665b4b83f17c8afbdb9ef467c5f3f8cb54616555616"
+            "url": "https://github.com/fredolx/meme-maker/releases/download/v0.2/mememaker_0.2_windows.zip",
+            "hash": "ad9b9cc3dc65a46842db9730975e2d7185197cdf132cabbacc3f9dca04e71e98"
         }
     },
     "bin": "./bin/meme-maker.exe",
