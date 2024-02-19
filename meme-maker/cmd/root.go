@@ -18,10 +18,11 @@ const (
 	yPaddingShortConst      = "y"
 	lineHeightConst         = "line"
 	lineHeightShortConst    = "l"
-	outputConst             = "output"
-	outputShortConst        = "o"
 	bottomCaptionConst      = "bottom-caption"
 	bottomCaptionShortConst = "b"
+	strokeWidthConst        = "stroke-width"
+	outputConst             = "output"
+	outputShortConst        = "o"
 )
 
 var rootCmd = &cobra.Command{
@@ -37,7 +38,17 @@ var rootCmd = &cobra.Command{
 		var lineHeight, _ = cmd.Flags().GetFloat64(lineHeightConst)
 		var bottomCaption, _ = cmd.Flags().GetString(bottomCaptionConst)
 		var output, _ = cmd.Flags().GetString(outputConst)
-		if e := caption.AddCaption(args[0], args[1], bottomCaption, xPadding, yPadding, font, fontSize, lineHeight, output); e != nil {
+		if e := caption.AddCaption(caption.CaptionArgs{
+			FilePath:        args[0],
+			Caption:         args[1],
+			XPaddingPercent: xPadding,
+			YPaddingPercent: yPadding,
+			Font:            font,
+			FontSize:        fontSize,
+			LineHeightPx:    lineHeight,
+			BottomCaption:   bottomCaption,
+			Output:          output,
+		}); e != nil {
 			log.Fatal(e)
 		}
 	},
