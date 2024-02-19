@@ -37,8 +37,10 @@ var rootCmd = &cobra.Command{
 		var fontSize, _ = cmd.Flags().GetFloat64(fontSizeConst)
 		var lineHeight, _ = cmd.Flags().GetFloat64(lineHeightConst)
 		var bottomCaption, _ = cmd.Flags().GetString(bottomCaptionConst)
+		var strokeWidth, _ = cmd.Flags().GetFloat64(strokeWidthConst)
 		var output, _ = cmd.Flags().GetString(outputConst)
-		if e := caption.AddCaption(caption.CaptionArgs{
+		c := caption.Caption{}
+		if e := c.AddCaption(caption.CaptionArgs{
 			FilePath:        args[0],
 			Caption:         args[1],
 			XPaddingPercent: xPadding,
@@ -47,6 +49,7 @@ var rootCmd = &cobra.Command{
 			FontSize:        fontSize,
 			LineHeightPx:    lineHeight,
 			BottomCaption:   bottomCaption,
+			StrokeWidth:     strokeWidth,
 			Output:          output,
 		}); e != nil {
 			log.Fatal(e)
@@ -66,4 +69,5 @@ func init() {
 	rootCmd.Flags().Float64P(lineHeightConst, lineHeightShortConst, 0, "Line height in pixels")
 	rootCmd.Flags().StringP(bottomCaptionConst, bottomCaptionShortConst, "", "Bottom caption")
 	rootCmd.Flags().StringP(outputConst, outputShortConst, "", "Output path for the meme'd image")
+	rootCmd.Flags().Float64(strokeWidthConst, 0, "Thickness of the outline used for top bottom text memes")
 }
