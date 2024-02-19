@@ -28,7 +28,7 @@ const (
 var rootCmd = &cobra.Command{
 	Use:     "meme-maker",
 	Short:   "Add captions to memes",
-	Args:    cobra.MinimumNArgs(2),
+	Args:    cobra.ExactArgs(2),
 	Example: `meme-maker myimage.png "my caption"`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var xPadding, _ = cmd.Flags().GetFloat64(xPaddingConst)
