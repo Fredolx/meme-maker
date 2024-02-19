@@ -23,133 +23,193 @@ type CaptionArgs struct {
 	output          string
 }
 
+type CaptionWands struct {
+	mw       *imagick.MagickWand
+	pw       *imagick.PixelWand
+	dw       *imagick.DrawingWand
+	bottomDW *imagick.DrawingWand
+}
+
+type AnnotateArgs struct {
+	mw           *imagick.MagickWand
+	dw           *imagick.DrawingWand
+	lines        []string
+	yPaddingPx   float64
+	gravity      imagick.GravityType
+	lineHeightPx float64
+}
+
 func fileNameWithoutExtension(fileName string) string {
 	return strings.TrimSuffix(filepath.Base(fileName), filepath.Ext(fileName))
 }
 
 func AddCaption(caption CaptionArgs) error {
-	var topBottomMode = bottomCaption != ""
-	var color = "black"
-	var e error
-	var dw, bottomDW *imagick.DrawingWand
 	var yPaddingPx float64 = 0
-	var isGif bool
-	if output == "" {
-		output = fmt.Sprintf("%s_memed%s", fileNameWithoutExtension(filePath), filepath.Ext(filePath))
-	}
-	if font == "" {
-		if runtime.GOOS == "windows" {
-			font = "Arial"
-		} else {
-			font = "DejaVu-Sans"
-		}
-	}
+	var wands CaptionWands = CaptionWands{}
 	imagick.Initialize()
 	defer imagick.Terminate()
-	mw := imagick.NewMagickWand()
-	pw := imagick.NewPixelWand()
-	if e = mw.ReadImage(filePath); e != nil {
+	wands.mw = imagick.NewMagickWand()
+	wands.pw = imagick.NewPixelWand()
+	if e := wands.mw.ReadImage(caption.filePath); e != nil {
 		return e
 	}
-	if fontSize == 0 {
-		fontSize = float64(mw.GetImageWidth()) / 15
+	isGif := wands.mw.GetImageFormat() == "GIF"
+	setDefaults(&caption, float64(wands.mw.GetImageWidth()))
+	setUpDrawingWands(&caption, wands)
+	if caption.yPaddingPercent != 0 {
+		yPaddingPx = caption.fontSize * (caption.yPaddingPercent / 100)
 	}
-	isGif = mw.GetImageFormat() == "GIF"
-	if yPaddingPercent != 0 {
-		yPaddingPx = fontSize * (yPaddingPercent / 100)
+	if wands.bottomDW != nil {
+		bottomCaptionLines := splitCaption(caption.caption, caption.xPaddingPercent,
+			wands.mw, wands.bottomDW)
+		_ = annotate(AnnotateArgs{
+			mw:           wands.mw,
+			dw:           wands.bottomDW,
+			lines:        bottomCaptionLines,
+			yPaddingPx:   yPaddingPx,
+			gravity:      imagick.GRAVITY_SOUTH,
+			lineHeightPx: caption.lineHeightPx,
+		})
 	}
-	if topBottomMode {
-		color = "white"
-		if bottomDW, e = setUpDrawingWand(pw, font, fontSize, color); e != nil {
-			return e
-		}
-		bottomCaptionLines := splitCaption(bottomCaption, mw, bottomDW, xPaddingPercent)
-		_ = annotate(mw, bottomDW, bottomCaptionLines, yPaddingPx, lineHeightPx, imagick.GRAVITY_SOUTH)
+	lines := splitCaption(caption.caption, caption.xPaddingPercent, wands.mw, wands.dw)
+	topCaptionHeight := annotate(AnnotateArgs{
+		mw:           wands.mw,
+		dw:           wands.dw,
+		lines:        lines,
+		yPaddingPx:   yPaddingPx,
+		gravity:      imagick.GRAVITY_NORTH,
+		lineHeightPx: caption.lineHeightPx,
+	})
+	if isGif {
+		handleGifs(wands)
 	}
-	if dw, e = setUpDrawingWand(pw, font, fontSize, color); e != nil {
+	drawImage(wands, topCaptionHeight)
+	if e := writeImage(isGif, wands, caption.output); e != nil {
 		return e
 	}
-	lines := splitCaption(caption, mw, dw, xPaddingPercent)
-	topCaptionHeight := annotate(mw, dw, lines, yPaddingPx, lineHeightPx, imagick.GRAVITY_NORTH)
+	return nil
+}
+
+func writeImage(isGif bool, wands CaptionWands, output string) error {
 	if isGif {
-		mw = mw.CoalesceImages()
-		var bgColor, _ = mw.GetImageBackgroundColor()
-		if bgColor.GetAlpha() == 0 {
-			mw.SetImageDispose(imagick.DISPOSE_BACKGROUND)
-		}
-	}
-	for ok := true; ok; ok = mw.NextImage() {
-		pw.SetColor("white")
-		mw.SetImageBackgroundColor(pw)
-		if !topBottomMode {
-			mw.SpliceImage(0, uint(topCaptionHeight), 0, 0)
-		} else {
-			if e := mw.DrawImage(bottomDW); e != nil {
-				return e
-			}
-		}
-		if e = mw.DrawImage(dw); e != nil {
-			return e
-		}
-	}
-	if isGif {
-		if e = mw.WriteImages(output, true); e != nil {
+		if e := wands.mw.WriteImages(output, true); e != nil {
 			return e
 		}
 	} else {
-		if e = mw.WriteImage(output); e != nil {
+		if e := wands.mw.WriteImage(output); e != nil {
 			return e
 		}
 	}
 	return nil
 }
 
-func setUpDrawingWand(pw *imagick.PixelWand, font string, fontSize float64, color string, stroke bool) (*imagick.DrawingWand, error) {
+func handleGifs(wands CaptionWands) {
+	wands.mw = wands.mw.CoalesceImages()
+	var bgColor, _ = wands.mw.GetImageBackgroundColor()
+	if bgColor.GetAlpha() == 0 {
+		wands.mw.SetImageDispose(imagick.DISPOSE_BACKGROUND)
+	}
+}
+
+func drawImage(wands CaptionWands, topCaptionHeight float64) error {
+	for ok := true; ok; ok = wands.mw.NextImage() {
+		wands.pw.SetColor("white")
+		wands.mw.SetImageBackgroundColor(wands.pw)
+		if wands.bottomDW == nil {
+			wands.mw.SpliceImage(0, uint(topCaptionHeight), 0, 0)
+		} else {
+			if e := wands.mw.DrawImage(wands.bottomDW); e != nil {
+				return e
+			}
+		}
+		if e := wands.mw.DrawImage(wands.dw); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+func setDefaults(caption *CaptionArgs, imageWidth float64) {
+	if caption.output == "" {
+		caption.output = fmt.Sprintf("%s_memed%s", fileNameWithoutExtension(caption.filePath),
+			filepath.Ext(caption.filePath))
+	}
+	if caption.font == "" {
+		if runtime.GOOS == "windows" {
+			caption.font = "Arial"
+		} else {
+			caption.font = "DejaVu-Sans"
+		}
+	}
+	if caption.fontSize == 0 {
+		caption.fontSize = float64(imageWidth) / 15
+	}
+	if caption.strokeWidth == 0 {
+		caption.strokeWidth = caption.fontSize / 40
+	}
+}
+
+func setUpDrawingWands(caption *CaptionArgs, wands CaptionWands) error {
+	var topBottomMode = caption.bottomCaption != ""
+	var e error
+	if topBottomMode {
+		caption.color = "white"
+		if wands.bottomDW, e = setUpDrawingWand(caption, wands); e != nil {
+			return e
+		}
+	}
+	if wands.dw, e = setUpDrawingWand(caption, wands); e != nil {
+		return e
+	}
+	return nil
+}
+
+func setUpDrawingWand(caption *CaptionArgs, wands CaptionWands) (*imagick.DrawingWand, error) {
 	dw := imagick.NewDrawingWand()
-	if e := dw.SetFont(font); e != nil {
+	if e := dw.SetFont(caption.font); e != nil {
 		return nil, e
 	}
-	pw.SetColor(color)
-	dw.SetFillColor(pw)
-	pw.SetColor("black")
-	dw.SetStrokeColor(pw)
-	dw.SetStrokeWidth(fontSize / 40)
+	wands.pw.SetColor(caption.color)
+	dw.SetFillColor(wands.pw)
+	wands.pw.SetColor("black")
+	dw.SetStrokeColor(wands.pw)
+	dw.SetStrokeWidth(caption.strokeWidth)
 	dw.SetStrokeAntialias(true)
-	dw.SetFontSize(fontSize)
+	dw.SetFontSize(caption.fontSize)
 	return dw, nil
 }
 
-func annotate(mw *imagick.MagickWand, dw *imagick.DrawingWand, lines []string, yPaddingPx float64, lineHeightPx float64, gravity imagick.GravityType) float64 {
-	dw.SetGravity(gravity)
-	metrics := mw.QueryFontMetrics(dw, lines[0])
-	var y float64 = metrics.BoundingBoxY2 - metrics.Ascender + yPaddingPx
-	if gravity == imagick.GRAVITY_SOUTH {
-		y = yPaddingPx
+func annotate(args AnnotateArgs) float64 {
+	args.dw.SetGravity(args.gravity)
+	metrics := args.mw.QueryFontMetrics(args.dw, args.lines[0])
+	var y float64 = metrics.BoundingBoxY2 - metrics.Ascender + args.yPaddingPx
+	if args.gravity == imagick.GRAVITY_SOUTH {
+		y = args.yPaddingPx
 	}
-	for i, str := range lines {
+	for i, str := range args.lines {
 		if i != 0 {
-			y += mw.QueryFontMetrics(dw, str).TextHeight + lineHeightPx
+			y += args.mw.QueryFontMetrics(args.dw, str).TextHeight + args.lineHeightPx
 		}
-		dw.Annotation(0, y, str)
+		args.dw.Annotation(0, y, str)
 	}
-	if strings.ContainsAny(lines[len(lines)-1], "gjpqy") {
+	if strings.ContainsAny(args.lines[len(args.lines)-1], "gjpqy") {
 		y += metrics.TextHeight
 	} else {
 		y += metrics.Ascender
 	}
-	y += yPaddingPx
+	y += args.yPaddingPx
 	return y
 }
 
-func splitCaption(caption string, mw *imagick.MagickWand, dw *imagick.DrawingWand, paddingPercent float64) []string {
+func splitCaption(caption string, xPaddingPercent float64, mw *imagick.MagickWand, dw *imagick.DrawingWand) []string {
+	var currentWidth float64 = 0
 	lines := []string{}
 	width := float64(mw.GetImageWidth())
-	if paddingPercent != 0 {
-		width = width - width*(paddingPercent/100)
+	if xPaddingPercent != 0 {
+		width = width - width*(xPaddingPercent/100)
 	}
 	spaceWidth := mw.QueryFontMetrics(dw, " ").TextWidth
 	words := strings.Split(caption, " ")
-	var currentWidth float64 = 0
 	currentLine := 0
 	for _, word := range words {
 		txtWidth := mw.QueryFontMetrics(dw, word).TextWidth
