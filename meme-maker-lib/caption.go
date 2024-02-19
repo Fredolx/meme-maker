@@ -171,13 +171,17 @@ func (c *Caption) setUpDrawingWand() (*imagick.DrawingWand, error) {
 	c.wands.pw.SetColor(c.args.Color)
 	dw.SetFillColor(c.wands.pw)
 	if c.topBottomMode {
-		c.wands.pw.SetColor("black")
-		dw.SetStrokeColor(c.wands.pw)
-		dw.SetStrokeWidth(c.args.StrokeWidth)
-		dw.SetStrokeAntialias(true)
+		c.addStroke(dw)
 	}
 	dw.SetFontSize(c.args.FontSize)
 	return dw, nil
+}
+
+func (c *Caption) addStroke(dw *imagick.DrawingWand) {
+	c.wands.pw.SetColor("black")
+	dw.SetStrokeColor(c.wands.pw)
+	dw.SetStrokeWidth(c.args.StrokeWidth)
+	dw.SetStrokeAntialias(true)
 }
 
 func (c *Caption) annotate(dw *imagick.DrawingWand, lines []string, gravity imagick.GravityType) float64 {
